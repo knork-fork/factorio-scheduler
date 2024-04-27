@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factorio Train Scheduler</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="mb-3">Factorio Train Scheduler</h1>
+        <form>
+            <div class="mb-3">
+                <label for="loaderStation" class="form-label">Loader Station Name:</label>
+                <input type="text" class="form-control" id="loaderStation" placeholder="Enter Loader Station Name">
+            </div>
+            <div class="mb-3">
+                <label for="unloaderStation" class="form-label">Unloader Station Name:</label>
+                <input type="text" class="form-control" id="unloaderStation" placeholder="Enter Unloader Station Name">
+            </div>
+            <div class="mb-3">
+                <label for="refuelingStation" class="form-label">Refueling Station Name:</label>
+                <input type="text" class="form-control" id="refuelingStation" placeholder="Enter Refueling Station Name">
+            </div>
+            <div class="mb-3">
+                <label for="deliveryCount" class="form-label">Number of Deliveries Before Refueling:</label>
+                <input type="number" class="form-control" id="deliveryCount" placeholder="Enter Number of Deliveries">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Schedule Option:</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="scheduleOption" id="defaultOption" value="default" checked>
+                    <label class="form-check-label" for="defaultOption">Default (empty & full cargo conditions)</label>
+                </div>
+                <div class="form-check">
+                    <input disabled class="form-check-input" type="radio" name="scheduleOption" id="customOption" value="custom">
+                    <label class="form-check-label" for="customOption">Custom (TO-DO)</label>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="fuelType" class="form-label">Fuel Type (TO-DO):</label>
+                <select disabled class="form-control" id="fuelType">
+                    <option value="no-fuel">(none selected)</option>
+                    <option value="coal">Coal</option>
+                    <option value="solid-fuel">Solid Fuel</option>
+                    <option value="rocket-fuel">Rocket Fuel</option>
+                    <option value="nuclear-fuel">Nuclear Fuel</option>
+                </select>
+            </div>            
+            <div class="mb-3">
+                <button type="button" class="btn btn-primary" onclick="generateBlueprint()">Generate Blueprint</button>
+            </div>
+            <div class="mb-3">
+                <label for="blueprintOutput" class="form-label">Blueprint Output:</label>
+                <textarea class="form-control" id="blueprintOutput" rows="4" readonly placeholder="click on generate blueprint"></textarea>
+            </div>
+            <div class="mb-3">
+                <button type="button" class="btn btn-primary" onclick="copyToClipboard()">Copy to Clipboard</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function copyToClipboard() 
+        {
+            const copyText = document.getElementById("blueprintOutput");
+            copyText.select();
+            document.execCommand("copy");
+            //alert("Copied to clipboard!");
+        }
+
+        function generateBlueprint()
+        {
+            const refuelingStation = document.getElementById("refuelingStation").value;
+            const loaderStation = document.getElementById("loaderStation").value;
+            const unloaderStation = document.getElementById("unloaderStation").value;
+            const deliveryCount = document.getElementById("deliveryCount").value;
+
+            var blueprintJson = {
+                "blueprint": {
+                    "icons": [{"signal": {"type": "item", "name": "locomotive"}, "index": 1}],
+                    "entities": [{"entity_number": 1, "name": "locomotive", "position": {"x": 569, "y": 2518.5}, "orientation": 0}],
+                    "schedules": [{
+                        "locomotives": [1],
+                        "schedule": [
+                        ]
+                    }],
+                    "item": "blueprint",
+                    "version": 281479278690304
+                }
+            };
+            const refuelingStationJson = {
+                "station": refuelingStation,
+                "wait_conditions": [{"compare_type": "or", "type": "inactivity", "ticks": 300}]
+            };
+            const loaderStationJson = {
+                "station": loaderStation,
+                "wait_conditions": [{"compare_type": "or", "type": "full"}]
+            };
+            const unloaderStationJson = {
+                "station": unloaderStation,
+                "wait_conditions": [{"compare_type": "or", "type": "empty"}]
+            };
+
+            blueprintJson.blueprint.schedules[0].schedule.push(refuelingStationJson);
+            for (i = 0; i < deliveryCount; i++) {
+                blueprintJson.blueprint.schedules[0].schedule.push(loaderStationJson);
+                blueprintJson.blueprint.schedules[0].schedule.push(unloaderStationJson);
+            }
+
+            const blueprintString = encodeBlueprint(JSON.stringify(blueprintJson));
+            document.getElementById("blueprintOutput").value = blueprintString;
+            copyToClipboard();
+        }
+
+        function encodeBlueprint(blueprintJson) 
+        {
+            try {
+                const jsonBytes = new TextEncoder().encode(blueprintJson);
+                const compressed = pako.deflate(jsonBytes, { level: 9 });
+                const base64String = btoa(String.fromCharCode.apply(null, compressed));
+
+                // Prepend the version byte ('0') to the Base64 string
+                const blueprintString = '0' + base64String;
+
+                return blueprintString;
+            } catch (err) {
+                console.error(err);
+                alert("Failed to encode the blueprint");
+                
+                return '';
+            }
+        }
+    </script>
+</body>
+</html>
