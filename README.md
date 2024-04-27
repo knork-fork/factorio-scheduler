@@ -12,6 +12,7 @@ This tool is designed to help automate the creation of train schedules with mult
 ## To-Do:
 
 - **Fuel Type Selection**: Choose the type of fuel for the train (train will be loaded by robots)
+- **Custom Wait Conditions**: Instead of waiting for full cargo, wait for e.g. 2000 space science packs
 
 ## Usage
 
